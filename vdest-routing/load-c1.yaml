@@ -1,0 +1,253 @@
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: anything
+  namespace: bookinfo
+spec:
+  options:
+#    federation:
+#      enabled: true
+#      hostSuffix: global
+#      serviceSelector:
+#        - {}
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: VirtualDestination
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  services:
+    - labels:
+        app: reviews
+  externalServices:
+    - labels:
+        app: reviews
+  ports:
+    - number: 8080
+      protocol: HTTP
+      targetPort:
+        number: 9080
+    - number: 80
+      protocol: HTTP
+      targetPort:
+        number: 9080
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: bookinfo-north-south
+  namespace: bookinfo
+  labels:
+    workspace.solo.io/exported: "true"
+spec:
+  hosts:
+    - "*"
+  virtualGateways:
+    - name: north-south-gw
+      namespace: istio-system
+      cluster: cluster-1
+  http:
+    - name: productpage
+      matchers:
+        - uri:
+            prefix: /productpage
+        - uri:
+            prefix: /static
+      forwardTo:
+        destinations:
+          - ref:
+              name: productpage
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 9080
+    - name: reviews
+      labels:
+        route: reviews
+      matchers:
+        - uri:
+            prefix: /reviews
+      forwardTo:
+        destinations:
+          - ref:
+              name: reviews
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 8080
+    - name: httpbin-c2
+      labels:
+        route: ext-httpbin
+      matchers:
+        - uri:
+            prefix: /httpbin/c2
+      forwardTo:
+        destinations:
+          - ref:
+              name: ext-httpbin
+              namespace: bookinfo
+              cluster: cluster-2
+            kind: EXTERNAL_SERVICE
+            port:
+              number: 8080
+    - name: httpbin-c1
+      labels:
+        route: ext-httpbin
+      matchers:
+        - uri:
+            prefix: /httpbin/c1
+      forwardTo:
+        destinations:
+          - ref:
+              name: ext-httpbin
+              namespace: bookinfo
+              cluster: cluster-1
+            kind: EXTERNAL_SERVICE
+            port:
+              number: 8080
+    - name: httpbin-vd
+      matchers:
+        - uri:
+            prefix: /httpbin/vd
+      forwardTo:
+        destinations:
+          - ref:
+              name: httpbin-vader
+              namespace: bookinfo
+              cluster: cluster-1
+            kind: VIRTUAL_DESTINATION
+            port:
+              number: 5080
+            weight: 10
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: bookinfo-east-west
+  namespace: bookinfo
+spec:
+  hosts:
+    - reviews.bookinfo.svc.cluster.local
+  workloadSelectors:
+    - selector:
+        labels:
+          app: productpage
+  http:
+    - name: httpbin
+      matchers:
+        - uri:
+            prefix: /httpbin
+      forwardTo:
+        destinations:
+          - ref:
+              name: ext-httpbin
+              namespace: bookinfo
+              cluster: cluster-2
+            kind: EXTERNAL_SERVICE
+            port:
+              number: 8080
+            weight: 10
+    - name: reviews
+      matchers:
+        - uri:
+            prefix: /reviews
+      forwardTo:
+        destinations:
+          - ref:
+              name: reviews
+            kind: VIRTUAL_DESTINATION
+            port:
+              number: 80
+            subset:
+              version: v1
+            weight: 15
+          - ref:
+              name: reviews
+            kind: VIRTUAL_DESTINATION
+            port:
+              number: 80
+            subset:
+              version: v2
+            weight: 10
+          - ref:
+              name: reviews
+            kind: VIRTUAL_DESTINATION
+            port:
+              number: 80
+            subset:
+              version: v3
+            weight: 75
+---
+kind: VirtualGateway
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: north-south-gw
+  namespace: istio-system
+spec:
+  workloads:
+    - selector:
+        labels:
+          istio: ingressgateway
+        cluster: cluster-1
+  listeners:
+    - port:
+        number: 80
+      http: {}
+---
+kind: ExternalService
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: ext-httpbin
+  namespace: bookinfo
+  labels:
+    app: ext-httpbin
+spec:
+  selector:
+    app: ext-httpbin
+  hosts:
+    - foo1.example.com
+  ports:
+    - number: 8080
+      name: http
+      protocol: HTTP
+      targetPort:
+        name: http
+---
+kind: ExternalEndpoint
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: ext-httpbin
+  namespace: bookinfo
+  labels:
+    app: ext-httpbin
+spec:
+  address: httpbin.org
+  ports:
+    - name: http
+      number: 80
+---
+kind: VirtualDestination
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: httpbin-vader
+  namespace: bookinfo
+spec:
+  clientMode:
+    tlsTermination: {}
+  hosts:
+    - httpbin1.external
+  externalServices:
+    - name: ext-httpbin
+      namespace: bookinfo
+      cluster: cluster-1
+  ports:
+    - number: 5080
+      protocol: HTTP
+      targetPort:
+        number: 8080

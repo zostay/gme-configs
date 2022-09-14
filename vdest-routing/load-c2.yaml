@@ -1,0 +1,65 @@
+---
+kind: VirtualDestination
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  services:
+    - labels:
+        app: reviews
+  ports:
+    - number: 80
+      protocol: HTTP
+      targetPort:
+        number: 9080
+---
+kind: ExternalService
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: ext-httpbin
+  namespace: bookinfo
+  labels:
+    app: ext-httpbin
+spec:
+  selector:
+    app: ext-httpbin
+  hosts:
+    - foo.example.com
+  ports:
+    - number: 8080
+      name: http
+      protocol: HTTP
+      targetPort:
+        name: http
+---
+kind: ExternalEndpoint
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: ext-httpbin
+  namespace: bookinfo
+  labels:
+    app: ext-httpbin
+spec:
+  address: httpbin.org
+  ports:
+    - name: http
+      number: 80
+---
+kind: VirtualDestination
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: httpbin-vader
+  namespace: bookinfo
+spec:
+  hosts:
+    - httpbin.external
+  externalServices:
+    - name: ext-httpbin
+      namespace: bookinfo
+      cluster: cluster-2
+  ports:
+    - number: 5080
+      protocol: HTTP
+      targetPort:
+        number: 8080
