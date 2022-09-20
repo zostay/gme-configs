@@ -1,0 +1,31 @@
+#/bin/zsh
+
+CLUSTER="$1"
+SECRET_NAME="$2"
+
+if [[ -z "$CLUSTER" ]]; then
+    CLUSTER=kind-mgmt-cluster
+fi
+
+if [[ -z "$SECRET_NAME" ]]; then
+    SECRET_NAME=license-keys
+fi
+
+gateway_license_key=$(echo $GLOO_GATEWAY_LICENSE_KEY | base64)
+mesh_license_key=$(echo $GLOO_MESH_LICENSE_KEY | base64)
+network_license_key=$(echo $GLOO_NETWORK_LICENSE_KEY | base64)
+
+kubectl --context "$CLUSTER" apply -f- << EOF
+apiVersion: v1
+data:
+  gloo-gateway-license-key: "$gateway_license_key"
+  gloo-mesh-license-key: "$mesh_license_key"
+  gloo-network-license-key: "$network_license_key"
+  gloo-trial-license-key: ""
+kind: Secret
+metadata:
+  name: $SECRET_NAME
+  namespace: gloo-mesh
+type: Opaque
+EOF
+
