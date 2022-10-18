@@ -1,0 +1,110 @@
+#!/usr/bin/env perl
+
+use v5.36;
+use warnings;
+
+use FindBin;
+use IPC::Run qw( run );
+use LWP::UserAgent;
+use LWP::UserAgent::DNS::Hosts;
+
+LWP::UserAgent::DNS::Hosts->register_host(
+    'www.example.com' => '127.0.0.1',
+);
+LWP::UserAgent::DNS::Hosts->enable_override;
+my $ua = LWP::UserAgent->new;
+
+sub MAIN () {
+    apply_config("cluster-1", "load-c1.yaml");
+    apply_config("mgmt-cluster", "load-mgmt.yaml");
+
+    # Things that don't work according to doctopus
+    #
+    # - https://docs.solo.io/gloo-gateway
+    # - https://docs.solo.io/gloo-mesh-enterprise/main/
+    #
+    # Standalone GG (use “main” version of docs):
+    # - Retry & timeout
+    # - Ext auth
+    #     - OIDC
+    #     - ApiKeys
+    # Mesh:
+    # - FailOver
+    # - Ext auth
+    #     - OIDC
+    #     - ApiKeys
+
+    test_GET(
+        "http://www.example.com:31080/productpage",
+        "Single Gateway Single Backend",
+    );
+    test_GET(
+        "https://www.example.com:31443/productpage",
+        "https listeneer",
+    );
+    test_NYI("https listener with file mount");
+    test_NYI("SNI routing");
+    test_NYI("mTLS listener");
+    test_NYI("Single Gateway Multi-cluster backend (non virtual destination)");
+    test_NYI("Multiple Gateway Multi cluster application (non virtual destination)");
+    test_NYI("Prefix based routing");
+    test_NYI("Exact path match");
+    test_NYI("Header name based routing");
+    test_NYI("Header value routing");
+    test_NYI("Header value based regex routing");
+    test_NYI("Header invert match routing");
+    test_NYI("Query based routing");
+    test_NYI("Query regex based routing");
+    test_NYI("Method Based routing");
+    test_NYI("Default Routing");
+    test_NYI("Host redirect");
+    test_NYI("Path redirect");
+    test_NYI("Prefix rewrite redirect");
+    test_NYI("Redirect with 307");
+    test_NYI("HTTPS redirect");
+    test_NYI("Redirect and strip query");
+    test_NYI("Host Based Delegation");
+    test_NYI("Path Based Delegation");
+    test_NYI("3 Tier Delegation");
+    test_NYI("Route to external service");
+    test_NYI("Route to external service with many external endpoints");
+    test_NYI("Route to external service with https upgrade");
+    test_NYI("Route to an https external service no upgrade");
+    test_NYI("Route to VirtualDestination");
+    test_NYI("Route to virtual destination with multiple ports");
+    test_NYI("Route based on subset value");
+    test_NYI("Multi cluster subset routing");
+}
+
+sub test_GET ($url, @msg) {
+    my $res = $ua->get($url);
+    if ($res->is_success) {
+        print "✅";
+    } else {
+        print "💥";
+    }
+    print " ", @msg, "\n";
+}
+
+sub test_NYI (@msg) {
+    print "🚫", " ", @msg, " (not implemented)\n";
+}
+
+sub apply_config ($cluster, $filename) {
+    my ($out, $err);
+    run([
+        "kubectl",
+        "--context", "kind-$cluster",
+        "apply",
+        "-f", "$FindBin::Bin/$filename"
+    ], '<', \undef, '>', \$out, '2>', \$err)
+        || die qq[failed to apply "$FindBin::Bin/$filename" to cluster "$cluster" with context "kind-$cluster"];
+
+    $out =~ s/^./🔌 /xmsg;
+    $err =~ s/^./‼️ /xmsg;
+
+    print $out;
+    print $err;
+}
+
+MAIN;
