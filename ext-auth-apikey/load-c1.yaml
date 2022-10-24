@@ -105,18 +105,15 @@ metadata:
 spec:
   applyToRoutes:
     - route:
-        name: bookinfo-north-south
-        namespace: bookinfo
-        cluster: cluster-1
-        labels:
-          route: ratings
+        name: ratings2
   config:
     glooAuth:
       configs:
         - apiKeyAuth:
             headerName: api-key
-            headersFromMetadata:
-              x-user-id: user-id
+            headersFromMetadataEntry:
+              x-user-id:
+                name: user-id
             labelSelector:
               team: infrastructure
     server:
