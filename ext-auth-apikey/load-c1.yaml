@@ -70,6 +70,21 @@ spec:
               cluster: cluster-1
             port:
               number: 9080
+    - name: httpbin-ratings
+      labels:
+        route: ratings
+      matchers:
+        - uri:
+            prefix: /httpbin-ratings
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
 ---
 apiVersion: admin.gloo.solo.io/v2
 kind: ExtAuthServer

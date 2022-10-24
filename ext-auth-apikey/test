@@ -6,6 +6,8 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
+use JSON qw( decode_json );
+
 use Kubectl qw( Cluster1 MgmtCluster );
 use Turl qw( test_GET );
 use Cert qw( make_tls_secret_if_needed );
@@ -39,6 +41,27 @@ sub MAIN () {
         },
     );
 
+    test_GET(
+        "https://www.example.com:31443/httpbin-ratings",
+        "httpbin-ratings is unauthorized without key",
+        {
+            expected_status => 401,
+        },
+    );
+
+    test_GET(
+        "https://www.example.com:31443/httpbin-ratings",
+        "httpbin reports receiving the API Key header",
+        {
+            headers => [
+                'api-key' => 'N2YwMDIxZTEtNGUzNS1jNzgzLTRkYjAtYjE2YzRkZGVmNjcy',
+            ],
+            response_matches => sub ($res) {
+                my $data = decode_json($res->content);
+                return $data->{headers}{"X-User-Id"} eq "userID-12345";
+            },
+        },
+    );
 }
 
 MAIN;

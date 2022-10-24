@@ -39,15 +39,28 @@ sub _test_res ($res, @args) {
         }
     }
 
+    if ($opt->{response_matches}) {
+        my $predicate = $opt->{response_matches};
+        if (!$predicate->($res)) {
+            $success = 0;
+            $extra .= ", " if $extra;
+            $extra .= "response does not match the given predicate";
+        }
+    }
+
     my $suffix = "";
     if ($success) {
         print "✅ ";
     } else {
         print "💥";
-        $suffix = " [$extra]";
     }
+    $suffix = " [$extra]" if $extra;
     my @msg = grep { !ref } @args;
     print " ", @msg, $suffix, "\n";
+
+    if ($opt->{print}) {
+        print $res->as_string;
+    }
 }
 
 sub _rewrite_url ($url) {
