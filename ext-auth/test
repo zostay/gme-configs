@@ -1,0 +1,49 @@
+#!/usr/bin/env perl
+
+use v5.36;
+use warnings;
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+use MIME::Base64 qw( encode_base64 );
+
+use Kubectl qw( Cluster1 MgmtCluster );
+use Turl qw( test_GET );
+use Cert qw( make_tls_secret_if_needed );
+
+sub MAIN () {
+    Cluster1->apply("load-c1.yaml");
+    MgmtCluster->apply("load-mgmt.yaml");
+
+    make_tls_secret_if_needed({
+        cluster   => Cluster1,
+        name      => 'example-secret',
+        host      => 'www.example.com',
+        namespace => 'istio-gateway-ns',
+    });
+
+    test_GET(
+        "https://www.example.com:31443/noauth",
+        "ratings is ok without authorization",
+    );
+
+    test_GET(
+        "https://www.example.com:31443/auth",
+        "httpbin is without authorization is unauthorized",
+        {
+            expected_status => 401,
+        }
+    );
+
+    my $auth = "Basic ".encode_base64("user:password");
+    test_GET(
+        "https://www.example.com:31443/auth",
+        "httpbin with authorization is authorized",
+        {
+            headers => [ authorization => $auth ],
+        }
+    );
+}
+
+MAIN;
