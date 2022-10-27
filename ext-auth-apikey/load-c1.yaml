@@ -120,7 +120,7 @@ metadata:
 spec:
   applyToRoutes:
     - route:
-        name: ratings2
+        name: ratings
   config:
     glooAuth:
       configs:

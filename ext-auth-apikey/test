@@ -24,6 +24,11 @@ sub MAIN () {
     });
 
     test_GET(
+        "https://www.example.com:31443/productpage",
+        "product page is authorized without key",
+    );
+
+    test_GET(
         "https://www.example.com:31443/ratings/1",
         "ratings is unauthorized without key",
         {
