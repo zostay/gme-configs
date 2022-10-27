@@ -14,9 +14,4 @@ Cluster1->remove({
     name      => 'example-secret',
     namespace => 'istio-gateway-ns',
 });
-Cluster1->remove({
-    kind      => 'secret',
-    name      => 'auth-secret',
-    namespace => 'istio-gateway-ns',
-});
 MgmtCluster->remove("load-mgmt.yaml");
