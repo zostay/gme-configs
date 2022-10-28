@@ -25,7 +25,7 @@ sub MAIN () {
 
     test_GET(
         "https://www.example.com:31443/noauth",
-        "ratings is ok without authorization",
+        "noauth version of httpbin is ok without authorization",
     );
 
     test_GET(
