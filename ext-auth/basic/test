@@ -4,7 +4,7 @@ use v5.36;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/../lib";
+use lib "$FindBin::Bin/../../lib";
 
 use MIME::Base64 qw( encode_base64 );
 
@@ -33,7 +33,7 @@ sub MAIN () {
         "httpbin is without authorization is unauthorized",
         {
             expected_status => 401,
-        }
+        },
     );
 
     my $auth = "Basic ".encode_base64("user:password");

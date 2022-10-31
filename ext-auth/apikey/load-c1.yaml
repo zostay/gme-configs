@@ -3,7 +3,7 @@ kind: WorkspaceSettings
 apiVersion: admin.gloo.solo.io/v2
 metadata:
   name: anything
-  namespace: bookinfo
+  namespace: httpbin
 spec:
   options:
     eastWestGateways:
@@ -14,8 +14,8 @@ spec:
 kind: RouteTable
 apiVersion: networking.gloo.solo.io/v2
 metadata:
-  name: bookinfo-north-south
-  namespace: bookinfo
+  name: httpbin-north-south
+  namespace: httpbin
   labels:
     workspace.solo.io/exported: "true"
 spec:
@@ -26,56 +26,27 @@ spec:
       namespace: istio-gateway-ns
       cluster: cluster-1
   http:
-    - name: productpage
+    - name: httpbin
+      labels:
+        route: auth
       matchers:
         - uri:
-            prefix: /productpage
-        - uri:
-            prefix: /static
-      labels:
-        route: productpage
+            prefix: /auth
       forwardTo:
+        pathRewrite: /headers
         destinations:
           - ref:
-              name: productpage
-              namespace: bookinfo
+              name: httpbin
+              namespace: httpbin
               cluster: cluster-1
             port:
-              number: 9080
-    - name: reviews
+              number: 8000
+    - name: httpbin-noauth
       labels:
-        route: reviews
+        route: noauth
       matchers:
         - uri:
-            prefix: /reviews
-      forwardTo:
-        destinations:
-          - ref:
-              name: reviews
-              namespace: bookinfo
-              cluster: cluster-1
-            port:
-              number: 9080
-    - name: ratings
-      labels:
-        route: ratings
-      matchers:
-        - uri:
-            prefix: /ratings
-      forwardTo:
-        destinations:
-          - ref:
-              name: ratings
-              namespace: bookinfo
-              cluster: cluster-1
-            port:
-              number: 9080
-    - name: httpbin-ratings
-      labels:
-        route: ratings
-      matchers:
-        - uri:
-            prefix: /httpbin-ratings
+            prefix: /noauth
       forwardTo:
         pathRewrite: /headers
         destinations:
@@ -90,7 +61,7 @@ apiVersion: admin.gloo.solo.io/v2
 kind: ExtAuthServer
 metadata:
   name: default-server
-  namespace: bookinfo
+  namespace: httpbin
 spec:
   destinationServer:
     port:
@@ -104,7 +75,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: apikey-infrastructure
-  namespace: bookinfo
+  namespace: httpbin
   labels:
     team: infrastructure
 type: extauth.solo.io/apikey
@@ -115,12 +86,13 @@ data:
 apiVersion: security.policy.gloo.solo.io/v2
 kind: ExtAuthPolicy
 metadata:
-  name: ratings-apikey
-  namespace: bookinfo
+  name: apikey
+  namespace: httpbin
 spec:
   applyToRoutes:
     - route:
-        name: ratings
+        labels:
+          route: auth
   config:
     glooAuth:
       configs:
@@ -133,7 +105,7 @@ spec:
               team: infrastructure
     server:
       name: default-server
-      namespace: bookinfo
+      namespace: httpbin
       cluster: cluster-1
 ---
 kind: VirtualGateway
