@@ -1,5 +1,9 @@
 # ext-auth-apikey
 
+Configure API key authentication for service named `/auth`, but not required for service named `/noauth`.
+
+Selection of services requiring API key auth is done for routes labeled `apikey: required`.
+
 For
 
 ```

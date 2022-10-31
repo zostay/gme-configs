@@ -32,8 +32,6 @@ spec:
             prefix: /productpage
         - uri:
             prefix: /static
-      labels:
-        route: productpage
       forwardTo:
         destinations:
           - ref:
@@ -44,7 +42,7 @@ spec:
               number: 9080
     - name: reviews
       labels:
-        route: reviews
+        apikey: none
       matchers:
         - uri:
             prefix: /reviews
@@ -58,7 +56,6 @@ spec:
               number: 9080
     - name: ratings
       labels:
-        route: ratings
         apikey: required
       matchers:
         - uri:
@@ -73,7 +70,6 @@ spec:
               number: 9080
     - name: httpbin-ratings
       labels:
-        route: ratings
         apikey: required
       matchers:
         - uri:

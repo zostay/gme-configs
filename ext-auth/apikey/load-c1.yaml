@@ -28,7 +28,7 @@ spec:
   http:
     - name: httpbin
       labels:
-        route: auth
+        apikey: required
       matchers:
         - uri:
             prefix: /auth
@@ -42,8 +42,6 @@ spec:
             port:
               number: 8000
     - name: httpbin-noauth
-      labels:
-        route: noauth
       matchers:
         - uri:
             prefix: /noauth
@@ -92,7 +90,7 @@ spec:
   applyToRoutes:
     - route:
         labels:
-          route: auth
+          apikey: required
   config:
     glooAuth:
       configs:

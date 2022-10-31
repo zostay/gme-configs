@@ -42,8 +42,6 @@ spec:
             port:
               number: 8000
     - name: httpbin-noauth
-      labels:
-        route: noauth
       matchers:
         - uri:
             prefix: /noauth
