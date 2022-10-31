@@ -1,0 +1,17 @@
+#!/usr/bin/env perl
+
+use v5.36;
+use warnings;
+
+use FindBin;
+use lib "$FindBin::Bin/../../lib";
+
+use Kubectl qw( MgmtCluster Cluster1 );
+
+Cluster1->remove("load-c1.yaml");
+Cluster1->remove({
+    kind      => 'secret',
+    name      => 'example-secret',
+    namespace => 'istio-gateway-ns',
+});
+MgmtCluster->remove("load-mgmt.yaml");

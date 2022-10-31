@@ -1,0 +1,219 @@
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: right
+  namespace: httpbin
+spec:
+  exportTo:
+    - workspaces:
+        - name: gateway
+        - name: left
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: httpbin-north-south
+  namespace: httpbin
+  labels:
+    workspace.solo.io/exported: "true"
+spec:
+  hosts:
+    - www.example.com
+  virtualGateways:
+    - name: north-south-gw
+      namespace: istio-gateway-ns
+      cluster: cluster-1
+  http:
+    - name: httpbin
+      labels:
+        route: auth
+        basicauth: required
+      matchers:
+        - uri:
+            prefix: /auth
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+    - name: httpbin-noauth
+      labels:
+        route: noauth
+      matchers:
+        - uri:
+            prefix: /noauth
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+---
+apiVersion: admin.gloo.solo.io/v2
+kind: ExtAuthServer
+metadata:
+  name: default-server
+  namespace: httpbin
+spec:
+  destinationServer:
+    port:
+      number: 8083
+    ref:
+      cluster: cluster-1
+      name: ext-auth-service
+      namespace: gloo-mesh-addons
+---
+apiVersion: security.policy.gloo.solo.io/v2
+kind: ExtAuthPolicy
+metadata:
+  name: basic-auth
+  namespace: httpbin
+spec:
+  applyToRoutes:
+  - route:
+      labels:
+        basicauth: required
+  config:
+    glooAuth:
+      configs:
+        - basicAuth:
+            apr:
+              users:
+                user:
+                  hashedPassword: 8BvzLUO9IfGPGGsPnAgSu1
+                  salt: TYiryv0/
+    server:
+      name: default-server
+      namespace: httpbin
+      cluster: cluster-1
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: gateway
+  namespace: istio-gateway-ns
+spec:
+  exportTo:
+    - workspaces:
+        - name: '*'
+  importFrom:
+    - workspaces:
+        - name: '*'
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: VirtualGateway
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: north-south-gw
+  namespace: istio-gateway-ns
+spec:
+  workloads:
+    - selector:
+        labels:
+          istio: ingressgateway
+        cluster: cluster-1
+  listeners:
+    - port:
+        number: 80
+      http: {}
+    - port:
+        number: 443
+      http: {}
+      tls:
+        mode: SIMPLE
+        secretName: example-secret
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: left
+  namespace: bookinfo
+spec:
+  exportTo:
+    - workspaces:
+        - name: gateway
+  importFrom:
+    - workspaces:
+        - name: right
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: bookinfo-north-south
+  namespace: bookinfo
+  labels:
+    workspace.solo.io/exported: "true"
+spec:
+  hosts:
+    - www.example.com
+  virtualGateways:
+    - name: north-south-gw
+      namespace: istio-gateway-ns
+      cluster: cluster-1
+  http:
+    - name: ratings
+      labels:
+        route: ratings
+        basicauth: required # but no policy exists in this workspace to enforce
+      matchers:
+        - uri:
+            prefix: /ratings
+      forwardTo:
+        destinations:
+          - ref:
+              name: ratings
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 9080
+    - name: httpbin
+      labels:
+        route: auth
+      matchers:
+        - uri:
+            prefix: /es-auth
+      forwardTo:
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+    - name: httpbin-noauth
+      labels:
+        route: noauth
+      matchers:
+        - uri:
+            prefix: /es-noauth
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
