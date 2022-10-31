@@ -41,10 +41,11 @@ sub _test_res ($res, @args) {
 
     if ($opt->{response_matches}) {
         my $predicate = $opt->{response_matches};
-        if (!$predicate->($res)) {
+        my ($ok, $details) = $predicate->($res);
+        if (!$ok) {
             $success = 0;
             $extra .= ", " if $extra;
-            $extra .= "response does not match the given predicate";
+            $extra .= $details // "response does not match the given predicate";
         }
     }
 
