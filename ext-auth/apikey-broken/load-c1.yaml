@@ -1,0 +1,159 @@
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: anything
+  namespace: bookinfo
+spec:
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: bookinfo-north-south
+  namespace: bookinfo
+  labels:
+    workspace.solo.io/exported: "true"
+spec:
+  hosts:
+    - www.example.com
+  virtualGateways:
+    - name: north-south-gw
+      namespace: istio-gateway-ns
+      cluster: cluster-1
+  http:
+    - name: productpage
+      matchers:
+        - uri:
+            prefix: /productpage
+        - uri:
+            prefix: /static
+      labels:
+        route: productpage
+      forwardTo:
+        destinations:
+          - ref:
+              name: productpage
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 9080
+    - name: reviews
+      labels:
+        route: reviews
+      matchers:
+        - uri:
+            prefix: /reviews
+      forwardTo:
+        destinations:
+          - ref:
+              name: reviews
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 9080
+    - name: ratings
+      labels:
+        route: ratings
+      matchers:
+        - uri:
+            prefix: /ratings
+      forwardTo:
+        destinations:
+          - ref:
+              name: ratings
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 9080
+    - name: httpbin-ratings
+      labels:
+        route: ratings
+      matchers:
+        - uri:
+            prefix: /httpbin-ratings
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+---
+apiVersion: admin.gloo.solo.io/v2
+kind: ExtAuthServer
+metadata:
+  name: default-server
+  namespace: bookinfo
+spec:
+  destinationServer:
+    port:
+      number: 8083
+    ref:
+      cluster: cluster-1
+      name: ext-auth-service
+      namespace: gloo-mesh-addons
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: apikey-infrastructure
+  namespace: bookinfo
+  labels:
+    team: infrastructure
+type: extauth.solo.io/apikey
+data:
+  api-key: TjJZd01ESXhaVEV0TkdVek5TMWpOemd6TFRSa1lqQXRZakUyWXpSa1pHVm1OamN5
+  user-id: dXNlcklELTEyMzQ1
+---
+apiVersion: security.policy.gloo.solo.io/v2
+kind: ExtAuthPolicy
+metadata:
+  name: ratings-apikey
+  namespace: bookinfo
+spec:
+  applyToRoutes:
+    - route:
+        name: ratings
+  config:
+    glooAuth:
+      configs:
+        - apiKeyAuth:
+            headerName: api-key
+            headersFromMetadataEntry:
+              x-user-id:
+                name: user-id
+            labelSelector:
+              team: infrastructure
+    server:
+      name: default-server
+      namespace: bookinfo
+      cluster: cluster-1
+---
+kind: VirtualGateway
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: north-south-gw
+  namespace: istio-gateway-ns
+spec:
+  workloads:
+    - selector:
+        labels:
+          istio: ingressgateway
+        cluster: cluster-1
+  listeners:
+    - port:
+        number: 80
+      http: {}
+    - port:
+        number: 443
+      http: {}
+      tls:
+        mode: SIMPLE
+        secretName: example-secret
