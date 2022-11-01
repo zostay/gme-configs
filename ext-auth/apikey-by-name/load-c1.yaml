@@ -1,0 +1,130 @@
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: anything
+  namespace: httpbin
+spec:
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: httpbin-north-south
+  namespace: httpbin
+  labels:
+    workspace.solo.io/exported: "true"
+spec:
+  hosts:
+    - www.example.com
+  virtualGateways:
+    - name: north-south-gw
+      namespace: istio-gateway-ns
+      cluster: cluster-1
+  http:
+    - name: httpbin
+      labels:
+        route: auth
+      matchers:
+        - uri:
+            prefix: /auth
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+    - name: httpbin-noauth
+      labels:
+        route: noauth
+      matchers:
+        - uri:
+            prefix: /noauth
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+---
+apiVersion: admin.gloo.solo.io/v2
+kind: ExtAuthServer
+metadata:
+  name: default-server
+  namespace: httpbin
+spec:
+  destinationServer:
+    port:
+      number: 8083
+    ref:
+      cluster: cluster-1
+      name: ext-auth-service
+      namespace: gloo-mesh-addons
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: apikey-infrastructure
+  namespace: httpbin
+  labels:
+    team: infrastructure
+type: extauth.solo.io/apikey
+data:
+  api-key: TjJZd01ESXhaVEV0TkdVek5TMWpOemd6TFRSa1lqQXRZakUyWXpSa1pHVm1OamN5
+  user-id: dXNlcklELTEyMzQ1
+---
+apiVersion: security.policy.gloo.solo.io/v2
+kind: ExtAuthPolicy
+metadata:
+  name: apikey
+  namespace: httpbin
+spec:
+  applyToRoutes:
+    - route:
+        name: httpbin
+  config:
+    glooAuth:
+      configs:
+        - apiKeyAuth:
+            headerName: api-key
+            headersFromMetadataEntry:
+              x-user-id:
+                name: user-id
+            labelSelector:
+              team: infrastructure
+    server:
+      name: default-server
+      namespace: httpbin
+      cluster: cluster-1
+---
+kind: VirtualGateway
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: north-south-gw
+  namespace: istio-gateway-ns
+spec:
+  workloads:
+    - selector:
+        labels:
+          istio: ingressgateway
+        cluster: cluster-1
+  listeners:
+    - port:
+        number: 80
+      http: {}
+    - port:
+        number: 443
+      http: {}
+      tls:
+        mode: SIMPLE
+        secretName: example-secret
