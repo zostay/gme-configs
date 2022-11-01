@@ -14,6 +14,34 @@ spec:
 kind: RouteTable
 apiVersion: networking.gloo.solo.io/v2
 metadata:
+  name: second-north-south
+  namespace: httpbin
+  labels:
+    workspace.solo.io/exported: "true"
+spec:
+  hosts:
+    - www.example.com
+  virtualGateways:
+    - name: north-south-gw
+      namespace: istio-gateway-ns
+      cluster: cluster-1
+  http:
+    - name: ratings
+      matchers:
+        - uri:
+            prefix: /ratings
+      forwardTo:
+        destinations:
+          - ref:
+              name: ratings
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 9080
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
   name: httpbin-north-south
   namespace: httpbin
   labels:

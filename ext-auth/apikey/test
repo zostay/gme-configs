@@ -31,6 +31,11 @@ sub MAIN () {
     );
 
     test_GET(
+        "https://www.example.com:31443/ratings/1",
+        "ratings in second routetable is ok without API key",
+    );
+
+    test_GET(
         "https://www.example.com:31443/auth",
         "httpbin without API key is unauthorized",
         {
