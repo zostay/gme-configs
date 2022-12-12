@@ -1,0 +1,27 @@
+---
+kind: Workspace
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: anything
+  namespace: gloo-mesh
+spec:
+  workloadClusters:
+    - name: '*'
+      namespaces:
+        - name: '*'
+---
+kind: KubernetesCluster
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: cluster-1
+  namespace: gloo-mesh
+spec:
+  clusterDomain: cluster.local
+---
+kind: KubernetesCluster
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: cluster-2
+  namespace: gloo-mesh
+spec:
+  clusterDomain: cluster.local
