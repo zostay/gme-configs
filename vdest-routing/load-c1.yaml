@@ -50,7 +50,7 @@ spec:
     - "*"
   virtualGateways:
     - name: north-south-gw
-      namespace: istio-system
+      namespace: istio-gateway-ns
       cluster: cluster-1
   http:
     - name: productpage
@@ -133,7 +133,7 @@ metadata:
   namespace: bookinfo
 spec:
   hosts:
-    - reviews.bookinfo.svc.cluster.local
+    - myreviews.bookinfo.svc.cluster.local
   workloadSelectors:
     - selector:
         labels:
@@ -188,7 +188,7 @@ kind: VirtualGateway
 apiVersion: networking.gloo.solo.io/v2
 metadata:
   name: north-south-gw
-  namespace: istio-system
+  namespace: istio-gateway-ns
 spec:
   workloads:
     - selector:
@@ -199,6 +199,31 @@ spec:
     - port:
         number: 80
       http: {}
+    - port:
+        number: 443
+      http: {}
+      tls:
+        mode: SIMPLE
+        secretName: example-secret
+---
+kind: VirtualGateway
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: east-west-gw
+  namespace: istio-gateway-ew
+spec:
+  workloads:
+    - selector:
+        labels:
+          istio: ingressgateway
+        cluster: cluster-1
+  listeners:
+    - port:
+        number: 443
+      http        host: myreviews.bookinfo.svc.cluster.local
+      tls:
+        mode: MUTUAL
+        secretName: internal-secret
 ---
 kind: ExternalService
 apiVersion: networking.gloo.solo.io/v2

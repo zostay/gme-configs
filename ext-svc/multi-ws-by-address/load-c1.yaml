@@ -1,0 +1,64 @@
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: gateway
+  namespace: istio-gateway-ns
+spec:
+  exportTo:
+    - workspaces:
+        - name: '*'
+  importFrom:
+    - workspaces:
+        - name: '*'
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: anything
+  namespace: helloworld
+spec:
+  importFrom:
+    - workspaces:
+        - name: '*'
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: anything
+  namespace: bookinfo
+spec:
+  importFrom:
+    - workspaces:
+        - name: '*'
+  exportTo:
+    - workspaces:
+        - name: '*'
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+apiVersion: networking.gloo.solo.io/v2
+kind: ExternalService
+metadata:
+  name: helloworld
+  namespace: helloworld
+spec:
+  addresses:
+    - "10.96.135.0/24"
+  ports:
+    - name: http
+      number: 5000
+      protocol: HTTP

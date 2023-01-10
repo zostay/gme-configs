@@ -1,0 +1,241 @@
+---
+kind: WorkspaceSettings
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: anything
+  namespace: httpbin
+spec:
+  options:
+    eastWestGateways:
+      - selector:
+          labels:
+            istio: eastwestgateway
+---
+kind: RouteTable
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: httpbin-north-south
+  namespace: httpbin
+  labels:
+    workspace.solo.io/exported: "true"
+spec:
+  hosts:
+    - www.example.com
+  virtualGateways:
+    - name: north-south-gw
+      namespace: istio-gateway-ns
+      cluster: cluster-1
+  http:
+    - name: ratings
+      labels:
+        route: ratings
+      matchers:
+        - uri:
+            prefix: /ratings
+      forwardTo:
+        destinations:
+          - ref:
+              name: ratings
+              namespace: bookinfo
+              cluster: cluster-1
+            port:
+              number: 9080
+    - name: httpbin-auth
+      labels:
+        auth: required
+      matchers:
+        - headers:
+            - name: stupid
+              value: flubber
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+    - name: httpbin-noauth
+      labels:
+        auth: nope
+      matchers:
+        - headers:
+            - name: stupid
+              value: blubber
+      forwardTo:
+        pathRewrite: /headers
+        destinations:
+          - ref:
+              name: httpbin
+              namespace: httpbin
+              cluster: cluster-1
+            port:
+              number: 8000
+---
+apiVersion: admin.gloo.solo.io/v2
+kind: ExtAuthServer
+metadata:
+  name: default-server
+  namespace: httpbin
+spec:
+  destinationServer:
+    port:
+      number: 8083
+    ref:
+      cluster: cluster-1
+      name: ext-auth-service
+      namespace: gloo-mesh-addons
+---
+apiVersion: security.policy.gloo.solo.io/v2
+kind: ExtAuthPolicy
+metadata:
+  name: oidc
+  namespace: httpbin
+spec:
+  applyToRoutes:
+    - route:
+        labels:
+          auth: required
+  config:
+    glooAuth:
+      configs:
+        - oidc:
+            clientId: ~
+            clientSecret: ~
+            clientSecretName: ~
+            issuerUrl: ~
+            appUrl: ~
+    server:
+      name: default-server
+      namespace: httpbin
+      cluster: cluster-1
+---
+kind: VirtualGateway
+apiVersion: networking.gloo.solo.io/v2
+metadata:
+  name: north-south-gw
+  namespace: istio-gateway-ns
+spec:
+  workloads:
+    - selector:
+        labels:
+          istio: ingressgateway
+        cluster: cluster-1
+  listeners:
+    - port:
+        number: 80
+      http: {}
+    - port:
+        number: 443
+      http: {}
+      tls:
+        mode: SIMPLE
+        secretName: example-secret
+#---
+#kind: Namespace
+#apiVersion: v1
+#metadata:
+#  name: keycloak
+#---
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: keycloak
+#  namespace: keycloak
+#  labels:
+#    app: keycloak
+#spec:
+#  ports:
+#    - name: http
+#      port: 8080
+#      targetPort: 8080
+#  selector:
+#    app: keycloak
+#  type: LoadBalancer
+#---
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: keycloak
+#  namespace: keycloak
+#  labels:
+#    app: keycloak
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: keycloak
+#  template:
+#    metadata:
+#      labels:
+#        app: keycloak
+#    spec:
+#      containers:
+#        - name: keycloak
+#          image: quay.io/keycloak/keycloak:19.0.3
+#          args: ["start-dev"]
+#          env:
+#            - name: KEYCLOAK_ADMIN
+#              value: "admin"
+#            - name: KEYCLOAK_ADMIN_PASSWORD
+#              value: "admin"
+#            - name: KC_PROXY
+#              value: "edge"
+#          ports:
+#            - name: http
+#              containerPort: 8080
+#          readinessProbe:
+#            httpGet:
+#              path: /realms/master
+#              port: 8080
+#---
+#kind: VirtualGateway
+#apiVersion: networking.gloo.solo.io/v2
+#metadata:
+#  name: auth-gw
+#  namespace: istio-gateway-ns
+#spec:
+#  workloads:
+#    - selector:
+#        labels:
+#          istio: ingressgateway
+#        cluster: cluster-1
+#  listeners:
+#    - port:
+#        number: 80
+#      http: {}
+#    - port:
+#        number: 443
+#      http: {}
+#      tls:
+#        mode: SIMPLE
+#        secretName: auth-secret
+#---
+#kind: RouteTable
+#apiVersion: networking.gloo.solo.io/v2
+#metadata:
+#  name: auth-routes
+#  namespace: keycloak
+#  labels:
+#    workspace.solo.io/exported: "true"
+#spec:
+#  hosts:
+#    - auth.example.com
+#  virtualGateways:
+#    - name: auth-gw
+#      namespace: istio-gateway-ns
+#      cluster: cluster-1
+#  http:
+#    - name: keycloak
+#      matchers:
+#        - uri:
+#            prefix: /
+#      forwardTo:
+#        destinations:
+#          - ref:
+#              name: keycloak
+#              namespace: keycloak
+#              cluster: cluster-1
+#            port:
+#              number: 8080

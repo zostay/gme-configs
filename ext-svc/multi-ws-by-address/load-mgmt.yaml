@@ -1,0 +1,54 @@
+---
+kind: Workspace
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: gateway
+  namespace: gloo-mesh
+spec:
+  workloadClusters:
+    - name: '*'
+      namespaces:
+        - name: istio-gateway-ns
+        - name: istio-gateway-ew
+        - name: istio-gateway-internal
+---
+kind: Workspace
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: helloworld
+  namespace: gloo-mesh
+spec:
+  workloadClusters:
+    - name: '*'
+      namespaces:
+        - name: helloworld
+        - name: gloo-mesh
+        - name: gloo-mesh-addons
+        - name: default
+---
+kind: Workspace
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: bookinfo
+  namespace: gloo-mesh
+spec:
+  workloadClusters:
+    - name: '*'
+      namespaces:
+        - name: bookinfo
+---
+kind: KubernetesCluster
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: cluster-1
+  namespace: gloo-mesh
+spec:
+  clusterDomain: cluster.local
+---
+kind: KubernetesCluster
+apiVersion: admin.gloo.solo.io/v2
+metadata:
+  name: cluster-2
+  namespace: gloo-mesh
+spec:
+  clusterDomain: cluster.local

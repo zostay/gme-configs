@@ -1,0 +1,49 @@
+#!/usr/bin/env perl
+
+use v5.36;
+use warnings;
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+use Cert qw( make_tls_secret_if_needed );
+use Kubectl qw( MgmtCluster Cluster1 Cluster2 );
+use Turl qw( test_GET test_ew_GET test_NYI );
+
+sub MAIN () {
+    make_tls_secret_if_needed({
+        cluster   => Cluster1,
+        name      => "example-secret",
+        namespace => "istio-gateway-ns",
+    });
+
+    make_tls_secret_if_needed({
+        cluster   => Cluster1,
+        name      => "internal-secret",
+        namespace => "istio-gateway-ew",
+        host      => "myreviews.bookinfo.svc.cluster.local",
+    });
+
+    Cluster1->apply("load-c1.yaml");
+    Cluster2->apply("load-c2.yaml");
+    MgmtCluster->apply("load-mgmt.yaml");
+
+    #Cluster->await("virtualservice",
+
+    test_GET(
+        "http://www.example.com:31080/productpage",
+        "Route to VirtualDestination",
+    );
+    test_ew_GET(
+        Cluster1, "helloworld", "helloworld-v1",
+        "http://myreviews.bookinfo.svc.cluster.local:8080/reviews",
+        "Route to VirtualDestination with multiple ports",
+    );
+
+    test_GET(
+        "http://www.example.com:31080/reviews",
+        "Route to VirtualDestination with multiple ports",
+    );
+}
+
+MAIN;

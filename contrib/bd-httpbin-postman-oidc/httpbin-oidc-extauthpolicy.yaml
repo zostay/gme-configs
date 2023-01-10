@@ -1,0 +1,36 @@
+apiVersion: security.policy.gloo.solo.io/v2
+kind: ExtAuthPolicy
+metadata:
+  name: httpbin
+spec:
+  applyToRoutes:
+  - route:
+      labels:
+        oauth: "true"
+  config:
+    glooAuth:
+      configs:
+      - oauth2:
+          oidcAuthorizationCode:
+            appUrl: https://a5d8e7fdc4b1e48368d2ec148eb4dd77-1836523227.us-west-1.elb.amazonaws.com 
+            callbackPath: /callback
+            clientId: solo
+            headers:
+              accessTokenHeader: access-token
+              idTokenHeader: id-token
+            clientSecretRef:
+              name: oauth
+              namespace: gloo-mesh
+            issuerUrl: http://a9ef341cdcc0f4a5ab2c5c8a14b18940-177396470.us-west-1.elb.amazonaws.com:8080/auth/realms/solo
+            scopes:
+            - email
+            session:
+              cookieOptions:
+                notSecure: false
+              redis:
+                options:
+                  host: redis.gloo-mesh.svc.cluster.local:6379
+    server:
+      cluster: mgmt-cluster
+      name: ext-auth-server
+      namespace: gloo-mesh

@@ -1,0 +1,31 @@
+apiVersion: networking.gloo.solo.io/v2
+kind: RouteTable
+metadata:
+  labels:
+    expose: "true"
+  name: httpbin
+spec:
+  hosts:
+  - 'a5d8e7fdc4b1e48368d2ec148eb4dd77-1836523227.us-west-1.elb.amazonaws.com'
+  http:
+  - forwardTo:
+      destinations:
+      - port:
+          number: 8000
+        ref:
+          name: httpbin
+          namespace: default
+    labels:
+      jwt-httpbin: "true"
+      oauth: "true"
+    matchers:
+    - uri:
+        prefix: /get
+    - uri:
+        prefix: /callback
+    name: httpbin
+  virtualGateways:
+  - cluster: cluster1
+    name: default
+    namespace: gloo-mesh
+  workloadSelectors: []

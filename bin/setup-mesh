@@ -1,0 +1,41 @@
+#!/usr/bin/env perl
+use v5.36;
+use warnings;
+
+use experimental 'try';
+no warnings 'experimental';
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+use Getopt::Long;
+use List::Util qw( uniq );
+
+use Kind;
+
+my @default_mgmt_clusters = qw( mgmt-cluster );
+my @default_work_clusters = qw( cluster-1 cluster-2 );
+my (@mgmt_clusters, @work_clusters);
+
+GetOptions(
+    'm|mgmt-cluster=s@'     => \@mgmt_clusters,
+    'w|workload-cluster=s@' => \@work_clusters,
+);
+
+@mgmt_clusters = @default_mgmt_clusters unless @mgmt_clusters;
+@work_clusters = @default_work_clusters unless @work_clusters;
+
+sub setup_mesh () {
+    my @all_clusters = uniq sort(@mgmt_clusters, @work_clusters);
+    for my $cluster (@all_clusters) {
+        print "Create cluster $cluster ... ";
+        Kind->create_cluster($cluster);
+        say "done.";
+    }
+}
+
+sub MAIN () {
+    setup_mesh();
+}
+
+MAIN();

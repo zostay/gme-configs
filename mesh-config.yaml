@@ -1,0 +1,42 @@
+---
+clusters:
+  mgmt-cluster:
+    classes: [ management ]
+  cluster-1:
+    classes: [ workload ]
+    apps:
+      - helloworld
+      - bookinfo
+      - httpbin
+  cluster-2:
+    classes: [ workload ]
+    apps:
+      - bookinfo-2
+
+classes:
+  management:
+    apps:
+      - gloo-mesh
+  workload:
+    apps:
+      - istiod
+    actions:
+      post-apps:
+        - trust
+
+apps:
+  bookinfo:
+
+  helloworld:
+
+  httpbin:
+
+  istiod:
+
+  gloo-mesh:
+
+hacks:
+  establish-trust:
+    from: cluster-1
+    to:
+      - cluster-2
